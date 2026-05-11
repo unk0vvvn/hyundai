@@ -14,6 +14,7 @@
             --text-main: #333333;
             --text-light: #666666;
             --border-color: #dddddd;
+            --accent-color: #0ea5e9;
         }
 
         * {
@@ -99,7 +100,7 @@
         }
 
         .message {
-            max-width: 80%;
+            max-width: 85%;
             display: flex;
             flex-direction: column;
             animation: fadeIn 0.3s ease-in-out;
@@ -153,15 +154,17 @@
             display: inline-block;
             background: #e2e8f0;
             color: #475569;
-            padding: 3px 8px;
+            padding: 4px 8px;
             border-radius: 4px;
             font-size: 12px;
             margin-right: 5px;
             margin-bottom: 5px;
+            font-weight: bold;
         }
 
         .tag.alert { background: #fee2e2; color: #991b1b; }
-        .tag.info { background: #e0f2fe; color: #075985; }
+        .tag.info { background: #e0f2fe; color: #0369a1; }
+        .tag.success { background: #dcfce7; color: #166534; }
 
         .list-group {
             list-style: none;
@@ -180,6 +183,30 @@
             position: absolute;
             left: 0;
             color: var(--primary-color);
+        }
+
+        /* Suggestion Chips */
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .chip {
+            background: white;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chip:hover {
+            background: var(--accent-color);
+            color: white;
         }
 
         /* Input Area */
@@ -242,41 +269,45 @@
     <div class="sidebar">
         <h2>R&D AI Assistant</h2>
         <p>아래 시나리오를 클릭하여 테스트해보세요.</p>
-        <div class="history-item" onclick="setInput('겨울철 영하 10도 이하 환경에서 배터리 충전 속도가 평소보다 30% 이상 느려집니다.')">❄️ 저온 환경 충전 저하</div>
-        <div class="history-item" onclick="setInput('110km/h 이상 고속으로 주행할 때 스티어링 휠(핸들)에 심한 떨림이 발생합니다.')">🏎️ 고속 주행 시 조향 떨림</div>
-        <div class="history-item" onclick="setInput('주행 중 간헐적으로 내비게이션(AVN) 화면이 꺼졌다가 스스로 재부팅되는 현상이 있습니다.')">🖥️ 인포테인먼트 재부팅 오류</div>
+        <div class="history-item" onclick="triggerScenario('겨울철 영하 10도 이하 환경에서 배터리 충전 속도가 평소보다 30% 이상 느려집니다.')">❄️ 저온 환경 충전 저하</div>
+        <div class="history-item" onclick="triggerScenario('110km/h 이상 고속으로 주행할 때 스티어링 휠(핸들)에 심한 떨림이 발생합니다.')">🏎️ 고속 주행 시 조향 떨림</div>
+        <div class="history-item" onclick="triggerScenario('주행 중 간헐적으로 내비게이션(AVN) 화면이 꺼졌다가 스스로 재부팅되는 현상이 있습니다.')">🖥️ 인포테인먼트 재부팅 오류</div>
     </div>
 
     <div class="main-chat">
         <div class="chat-header">
             <h1>이슈 분석 자동화 세션</h1>
-            <span class="tag info">3종 시나리오 대응 엔진 활성화됨</span>
+            <span class="tag success">R&D 통합 지식베이스 연동 완료</span>
         </div>
 
         <div class="chat-messages" id="chatMessages">
             <div class="message system">
                 <div class="bubble">
-                    안녕하세요. R&D 문서 기반 이슈 분석 어시스턴트입니다.<br>
-                    발생한 이슈의 증상이나 조건을 상세히 입력해주시면, 과거 데이터를 분석하여 원인과 해결책을 제안해 드립니다.<br><br>
-                    <em>(좌측 메뉴를 클릭하여 시나리오를 테스트할 수 있습니다.)</em>
+                    안녕하세요. R&D 문서 통합 분석 어시스턴트입니다.<br>
+                    발생한 이슈의 증상이나 조건을 입력해주시면, 과거 데이터를 분석하고 추가적인 기술 지원을 제공합니다.<br><br>
+                    <em>(좌측 메뉴를 클릭하여 시나리오를 시작할 수 있습니다.)</em>
                 </div>
             </div>
         </div>
 
-        <div class="typing" id="typingIndicator">AI가 R&D 문서를 검색하고 분석 중입니다...</div>
+        <div class="typing" id="typingIndicator">AI가 지식베이스를 분석하고 있습니다...</div>
 
         <div class="chat-input-container">
             <div class="input-wrapper">
-                <input type="text" id="userInput" placeholder="발생한 이슈를 입력하세요...">
-                <button onclick="sendMessage()">분석 요청</button>
+                <input type="text" id="userInput" placeholder="발생한 이슈나 추가 질문을 입력하세요...">
+                <button onclick="handleUserInput()">전송</button>
             </div>
         </div>
     </div>
 
     <script>
-        // 3가지 시나리오 데이터베이스
+        // 현재 활성화된 시나리오의 ID (문맥 유지를 위함)
+        let currentScenarioId = null;
+
+        // 3가지 시나리오 및 후속 흐름(Follow-ups) 데이터베이스
         const scenariosDB = [
             {
+                id: "battery_issue",
                 keywords: ["배터리", "충전", "저온", "겨울", "영하"],
                 extraction: { env: "저온 (-10℃ 이하)", part: "배터리 / BMS", symptom: "충전 속도 30% 저하" },
                 similarIssues: [
@@ -284,64 +315,121 @@
                     "[2022-12 품질이슈] A차종 북미 지역 윈터 테스트 중 급속 충전 출력 제한 현상 (유사도 85%)"
                 ],
                 causes: [
-                    "<strong>[제어 로직]</strong> BMS 내 저온 환경 충전 프로파일 (SOC별 전류 제한) 설정 보수적 적용 가능성",
-                    "<strong>[설계/HW]</strong> 배터리 프리히팅(Pre-heating) 시스템 동작 지연 또는 히터 용량 한계"
+                    "<strong>[제어 로직]</strong> BMS 내 저온 환경 충전 프로파일(SOC별 전류 제한) 보수적 적용",
+                    "<strong>[설계/HW]</strong> 배터리 프리히팅(Pre-heating) 시스템 동작 지연"
                 ],
                 solutions: [
-                    "<strong>조치 1 (적용 권장):</strong> BMS의 저온 충전 맵핑 파라미터 최적화 (2023-11 사례 참조 - 제어 로직 0.5v 업데이트)",
-                    "<strong>조치 2:</strong> 충전기 체결 시 배터리 사전 승온 로직 진입 조건 완화 (2022-12 설계 변경 이력 적용)"
+                    "<strong>조치 1:</strong> BMS의 저온 충전 맵핑 파라미터 최적화 (권장)",
+                    "<strong>조치 2:</strong> 충전기 체결 시 사전 승온 로직 진입 조건 완화"
                 ],
-                report: "[이슈 개요] 저온(-10℃ 이하) 환경 충전 속도 저하 현상 보고\n- 발생 조건 : 동절기 / -10℃ 이하 / 충전 시\n- 주요 증상 : 정상 대비 충전 속도 30% 이상 감소\n- 원인 후보 : BMS 온도별 충전 프로파일 로직 검토 요망 (우선순위 1)\n- 권장 조치 : 과거 유사 사례(2023-11) 기반 저온 맵핑 파라미터 튜닝 및 시험 재진행."
+                report: "[이슈 개요] 저온 환경 충전 속도 저하 현상 보고\n- 발생 조건 : 동절기 / -10℃ 이하\n- 권장 조치 : 과거 유사 사례(2023-11) 기반 맵핑 파라미터 튜닝",
+                suggestions: ["💡 조치 1의 파라미터 최적화 상세 내역 보여줘", "💡 과거 온도 센서 오차 사례 원인이 뭐야?"],
+                followUps: [
+                    {
+                        keywords: ["파라미터", "최적화", "상세", "조치 1", "맵핑"],
+                        response: `<strong>[BMS 저온 맵핑 파라미터 최적화 가이드]</strong><br><br>
+                        2023-11 사례에 적용된 파라미터 변경 내역입니다.<br>
+                        - SOC 10~40% 구간: 최대 허용 전류 150A -> <strong>175A로 상향</strong><br>
+                        - 승온 목표 온도: 5℃ -> <strong>10℃로 조기 승온 개시</strong><br><br>
+                        이 세팅을 적용한 시험용 바이너리(v0.5.1)를 로드하여 테스트하시길 권장합니다.`
+                    },
+                    {
+                        keywords: ["센서", "오차", "과거", "원인"],
+                        response: `<strong>[온도 센서 오차 발생 원인 분석]</strong><br><br>
+                        과거 사례 분석 결과, 극저온(-15℃ 이하)에서 배터리 셀과 센서 접점 부위의 열수축 편차로 인해 실제보다 온도를 3~5℃ 낮게 측정하는 하드웨어 공차 문제가 있었습니다. 이를 보정하는 SW 필터 로직이 추가된 바 있습니다.`
+                    }
+                ]
             },
             {
+                id: "steering_issue",
                 keywords: ["고속", "주행", "조향", "떨림", "진동", "핸들", "110km"],
                 extraction: { env: "고속 주행 (100km/h 이상)", part: "조향장치 / 서스펜션", symptom: "스티어링 휠(핸들) 진동 및 떨림" },
                 similarIssues: [
-                    "[2023-05 고객불만] B차종 110km/h 이상 주행 시 스티어링 떨림 현상 (유사도 88%)",
-                    "[2021-09 시험리포트] 고속 주행 테스트 중 하체 공진음에 동반된 미세 진동 (유사도 76%)"
+                    "[2023-05 고객불만] B차종 110km/h 이상 주행 시 스티어링 떨림 현상 (유사도 88%)"
                 ],
                 causes: [
-                    "<strong>[부품 편차]</strong> 휠 밸런스 불량 또는 타이어 조립 공차로 인한 고속 진동 유발",
-                    "<strong>[제어 로직]</strong> MDPS(전자식 조향장치) 고속 주행 시 댐핑 제어 로직 최적화 미흡",
-                    "<strong>[설계/HW]</strong> 로어암 부싱 강성 부족으로 인한 노면 진동 전달"
+                    "<strong>[부품 편차]</strong> 휠 밸런스 불량 또는 타이어 조립 공차",
+                    "<strong>[제어 로직]</strong> MDPS 고속 주행 시 댐핑 제어 로직 최적화 미흡"
                 ],
                 solutions: [
-                    "<strong>조치 1 (적용 권장):</strong> 휠 밸런스 재점검 및 MDPS 고속 댐핑 로직(v1.2) 업데이트 적용 (2023-05 사례)",
-                    "<strong>조치 2:</strong> 서스펜션 로어암 부싱 사양 변경(강성 증대품) 테스트 진행"
+                    "<strong>조치 1:</strong> 휠 밸런스 점검 및 MDPS 고속 댐핑 로직(v1.2) 업데이트 (권장)",
+                    "<strong>조치 2:</strong> 서스펜션 로어암 부싱 사양 변경 검토"
                 ],
-                report: "[이슈 개요] 고속 주행 시 스티어링 휠 떨림 현상 보고\n- 발생 조건 : 100km/h 이상 고속 주행\n- 주요 증상 : 조향장치(핸들) 진동 및 떨림 발생\n- 원인 후보 : 휠 밸런스 불량 및 MDPS 댐핑 제어 부족 (우선순위 1)\n- 권장 조치 : 휠 밸런스 점검 및 MDPS 로직 업데이트 후 실차 평가 진행."
+                report: "[이슈 개요] 고속 주행 시 스티어링 휠 떨림 현상\n- 발생 조건 : 100km/h 이상 주행\n- 권장 조치 : 휠 밸런스 점검 및 MDPS 로직 업데이트",
+                suggestions: ["💡 MDPS v1.2 업데이트의 주요 변경점은?", "💡 로어암 부싱 강성 비교 데이터 확인"],
+                followUps: [
+                    {
+                        keywords: ["v1.2", "MDPS", "업데이트", "변경점", "로직"],
+                        response: `<strong>[MDPS v1.2 업데이트 릴리즈 노트]</strong><br><br>
+                        - <strong>적용 대상:</strong> 100km/h 이상 고속 주행 시<br>
+                        - <strong>주요 변경점:</strong> 고속 항속 시 조향 랙(Rack) 기어에 인가되는 미세 역입력 진동을 상쇄하기 위해, 액티브 댐핑(Active Damping) 게인 값을 기존 대비 15% 증대시켰습니다. 이를 통해 노면 진동의 스티어링 휠 전달률을 감소시켰습니다.`
+                    },
+                    {
+                        keywords: ["부싱", "로어암", "강성", "데이터", "비교"],
+                        response: `<strong>[로어암 부싱 강성 비교 데이터]</strong><br><br>
+                        - 기존 부싱 (Part No: 54500-A): 동특성 150 N/mm<br>
+                        - 개선 부싱 (Part No: 54500-B): <strong>동특성 185 N/mm (+23% 강화)</strong><br><br>
+                        개선품 적용 시 고속 주행 시 발생하는 15~20Hz 대역의 공진 진폭이 약 40% 감소하는 시험 결과가 있습니다.`
+                    }
+                ]
             },
             {
+                id: "avn_issue",
                 keywords: ["인포테인먼트", "재부팅", "화면", "오류", "꺼짐", "블랙아웃", "내비게이션", "AVN"],
                 extraction: { env: "주행/정차 무관", part: "AVN (인포테인먼트)", symptom: "시스템 화면 꺼짐 및 자동 재부팅" },
                 similarIssues: [
-                    "[2024-01 품질이슈] C차종 OTA 업데이트 이후 AVN 간헐적 재부팅 발생 (유사도 95%)",
-                    "[2023-08 SW오류로그] 메모리 누수로 인한 시스템 강제 초기화 현상 (유사도 82%)"
+                    "[2024-01 품질이슈] C차종 OTA 업데이트 이후 AVN 간헐적 재부팅 발생 (유사도 95%)"
                 ],
                 causes: [
-                    "<strong>[SW 오류]</strong> 특정 프로세스(내비게이션 등) 실행 시 메모리 누수(Memory Leak)로 인한 OOM 발생",
-                    "<strong>[제어 로직]</strong> 과부하 조건에서 AP(Application Processor) 발열로 인한 스로틀링 및 보호 로직 작동"
+                    "<strong>[SW 오류]</strong> 특정 프로세스(내비게이션 등) 실행 시 메모리 누수",
+                    "<strong>[제어 로직]</strong> AP 발열로 인한 스로틀링 및 보호 로직 작동"
                 ],
                 solutions: [
-                    "<strong>조치 1 (적용 권장):</strong> AVN SW 메모리 최적화 패치(v2.1.4) 적용 및 OTA 배포 (2024-01 사례 참조)",
-                    "<strong>조치 2:</strong> 발열 조건 재현 테스트 및 쿨링 로직 작동 기준 온도 하향 조정 검토"
+                    "<strong>조치 1:</strong> AVN SW 메모리 최적화 패치(v2.1.4) 적용 (권장)",
+                    "<strong>조치 2:</strong> 쿨링 로직 작동 기준 온도 하향 조정"
                 ],
-                report: "[이슈 개요] 인포테인먼트(AVN) 시스템 간헐적 재부팅 현상 보고\n- 발생 조건 : 시스템 사용 중 (특정 조건 없음)\n- 주요 증상 : 화면 블랙아웃 및 자동 재부팅\n- 원인 후보 : SW 메모리 누수 또는 AP 발열 (우선순위 1)\n- 권장 조치 : 메모리 누수 확인용 디버그 펌웨어 설치 후 로그 추출, 최적화 패치 적용."
+                report: "[이슈 개요] AVN 시스템 간헐적 재부팅 현상\n- 발생 조건 : 시스템 사용 중\n- 권장 조치 : 메모리 누수 확인용 디버그 펌웨어 설치 후 로그 추출",
+                suggestions: ["💡 디버그 펌웨어 설치 및 로그 추출 방법", "💡 최근 OTA(v2.1.4) 배포 이력 확인"],
+                followUps: [
+                    {
+                        keywords: ["디버그", "펌웨어", "로그", "추출", "방법", "설치"],
+                        response: `<strong>[디버그 로그 추출 프로세스]</strong><br><br>
+                        1. 진단기(KDS) 연결 후 AVN 모듈 엔지니어링 모드 진입 (비밀번호: 2024#)<br>
+                        2. 'Memory Monitor' 활성화 후 주행 테스트 진행<br>
+                        3. 재부팅 현상 재현 직후 USB를 통해 <code>/var/log/syslog</code> 및 <code>dumpstate</code> 파일 추출<br>
+                        4. 추출된 로그를 분석 시스템에 업로드해주세요.`
+                    },
+                    {
+                        keywords: ["OTA", "배포", "이력", "v2.1.4"],
+                        response: `<strong>[OTA 배포 이력 정보]</strong><br><br>
+                        - <strong>버전:</strong> v2.1.4 (2024.01.15 배포)<br>
+                        - <strong>배포 대상:</strong> C차종 전체<br>
+                        - <strong>패치 내용:</strong> 지도 데이터 로딩 시 발생하는 캐시 메모리 반환 오류 수정. 해당 패치 적용 차량에서는 동일한 재부팅 이슈 접수율이 98% 감소했습니다.`
+                    }
+                ]
             }
         ];
 
         const inputField = document.getElementById('userInput');
         inputField.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') sendMessage();
+            if (e.key === 'Enter') handleUserInput();
         });
 
-        // 사이드바 클릭 시 입력창 채우기 함수
-        function setInput(text) {
+        // 사이드바에서 시나리오를 강제로 트리거할 때
+        function triggerScenario(text) {
+            currentScenarioId = null; // 문맥 초기화 (새로운 시나리오 시작)
             inputField.value = text;
-            inputField.focus();
+            handleUserInput();
         }
 
-        function sendMessage() {
+        // 제안 버튼(Chip) 클릭 시
+        function sendFollowUp(text) {
+            // 버튼 텍스트 앞의 이모지(💡) 제거 후 전송
+            inputField.value = text.replace('💡 ', '');
+            handleUserInput();
+        }
+
+        function handleUserInput() {
             const text = inputField.value.trim();
             if (!text) return;
 
@@ -352,35 +440,54 @@
             typing.style.display = 'block';
             scrollToBottom();
 
-            // 입력된 텍스트를 분석하여 적절한 시나리오 선택
-            const matchedScenario = analyzeInput(text);
-
             setTimeout(() => {
                 typing.style.display = 'none';
-                addSystemAnalysisResponse(matchedScenario);
-            }, 1500);
+                processAIResponse(text);
+            }, 800); // 딜레이를 약간 줄여서 빠른 반응성 확보
         }
 
-        // 키워드 매칭 함수
-        function analyzeInput(text) {
+        // 입력 텍스트 분석 및 응답 처리 로직 (상태 기반)
+        function processAIResponse(text) {
+            // 1. 새로운 시나리오 키워드인지 먼저 확인 (강한 문맥 전환)
+            let matchedNewScenario = null;
             for (let scenario of scenariosDB) {
-                // 입력 텍스트에 시나리오 키워드가 2개 이상 포함되어 있는지 확인
                 let matchCount = scenario.keywords.filter(keyword => text.includes(keyword)).length;
                 if (matchCount >= 2) {
-                    return scenario;
+                    matchedNewScenario = scenario;
+                    break;
                 }
             }
-            
-            // 매칭되는 키워드가 없을 경우 기본(Default) 응답
-            return {
-                extraction: { env: "조건 미상", part: "분석 필요", symptom: "기타 증상 (상세 분석 요망)" },
-                similarIssues: ["[시스템 메시지] 정확히 일치하는 과거 이력을 찾지 못했습니다. 추가 정보를 입력해주세요."],
-                causes: ["<strong>[미분류]</strong> 입력된 정보가 부족하여 원인 후보를 도출할 수 없습니다."],
-                solutions: ["<strong>조치 권장:</strong> 센서 로그 데이터 및 에러 코드를 추가로 입력해주세요."],
-                report: "데이터 부족으로 보고서를 자동 생성할 수 없습니다."
-            };
+
+            // 새로운 시나리오가 인식되었다면 초기 분석 결과 출력
+            if (matchedNewScenario && (!currentScenarioId || matchedNewScenario.id !== currentScenarioId)) {
+                currentScenarioId = matchedNewScenario.id;
+                renderMainAnalysis(matchedNewScenario);
+                return;
+            }
+
+            // 2. 현재 활성화된 시나리오가 있을 경우 (Follow-up 꼬리 질문 처리)
+            if (currentScenarioId) {
+                const activeScenario = scenariosDB.find(s => s.id === currentScenarioId);
+                
+                // 후속 질문 키워드 매칭
+                for (let followUp of activeScenario.followUps) {
+                    let isMatch = followUp.keywords.some(keyword => text.includes(keyword));
+                    if (isMatch) {
+                        renderSimpleResponse(followUp.response, activeScenario.suggestions);
+                        return;
+                    }
+                }
+
+                // 매칭되는 후속 키워드가 없지만 문맥이 유지 중일 때 (기본 답변)
+                renderSimpleResponse(`해당 이슈에 대해 더 궁금한 점이 있으신가요? 관련된 설계 파라미터나 로그 추출 방법 등을 분석해 드릴 수 있습니다.`, activeScenario.suggestions);
+                return;
+            }
+
+            // 3. 완전히 매칭되는 것이 없을 때 (Default)
+            renderSimpleResponse("현재 입력하신 정보만으로는 명확한 유사 이슈를 찾기 어렵습니다. 발생 차종이나 관련 부품, 에러 코드 등을 더 자세히 입력해주세요.");
         }
 
+        // DOM 요소 추가 헬퍼 함수
         function addMessage(text, sender) {
             const messagesDiv = document.getElementById('chatMessages');
             const msgDiv = document.createElement('div');
@@ -395,54 +502,84 @@
             scrollToBottom();
         }
 
-        // 시나리오 데이터를 받아 동적으로 HTML 생성
-        function addSystemAnalysisResponse(data) {
+        // 1. 메인 분석 결과 출력 (4단계 구조화)
+        function renderMainAnalysis(data) {
             const messagesDiv = document.getElementById('chatMessages');
             const msgDiv = document.createElement('div');
             msgDiv.className = `message system`;
             
-            // 배열 데이터를 리스트 HTML로 변환하는 헬퍼 함수
             const createListHTML = (items) => items.map(item => `<li>${item}</li>`).join('');
+
+            // 후속 질문(Suggestion) 칩 생성
+            let suggestionsHTML = '';
+            if (data.suggestions && data.suggestions.length > 0) {
+                suggestionsHTML = `<div class="suggestions">
+                    ${data.suggestions.map(s => `<div class="chip" onclick="sendFollowUp('${s}')">${s}</div>`).join('')}
+                </div>`;
+            }
 
             msgDiv.innerHTML = `
                 <div class="bubble">
-                    입력하신 내용을 바탕으로 R&D 문서를 통합 분석한 결과입니다.
+                    입력하신 내용을 바탕으로 지식베이스를 통합 분석한 결과입니다.
                     
                     <div class="ai-structure">
-                        <h3>🔍 핵심 정보 추출</h3>
-                        <span class="tag">환경조건: ${data.extraction.env}</span>
-                        <span class="tag">관련부품: ${data.extraction.part}</span>
+                        <h3>🔍 1. 핵심 정보 추출</h3>
+                        <span class="tag info">환경조건: ${data.extraction.env}</span>
+                        <span class="tag info">관련부품: ${data.extraction.part}</span>
                         <span class="tag alert">주요증상: ${data.extraction.symptom}</span>
                     </div>
 
                     <div class="ai-structure">
-                        <h3>1. 유사 이슈 자동 검색 (과거 R&D 이력)</h3>
+                        <h3>📋 2. 과거 유사 이슈 및 원인 후보</h3>
                         <ul class="list-group">
                             ${createListHTML(data.similarIssues)}
                         </ul>
-                    </div>
-
-                    <div class="ai-structure">
-                        <h3>2. 원인 후보 자동 분류</h3>
+                        <div style="border-top: 1px dashed #ccc; margin: 10px 0; padding-top: 10px;"></div>
                         <ul class="list-group">
                             ${createListHTML(data.causes)}
                         </ul>
                     </div>
 
                     <div class="ai-structure">
-                        <h3>3. 해결 사례 추천</h3>
+                        <h3>🛠️ 3. 해결 사례 추천</h3>
                         <ul class="list-group">
                             ${createListHTML(data.solutions)}
                         </ul>
                     </div>
 
                     <div class="ai-structure" style="background:#f8fafc;">
-                        <h3>📝 4. 보고서 초안 생성</h3>
+                        <h3>📝 4. 보고서 초안</h3>
                         <div style="font-family: monospace; font-size: 13px; color: #475569; white-space: pre-line; line-height: 1.6;">
                             ${data.report}
                         </div>
-                        <button style="margin-top:10px; padding:5px 10px; font-size:12px; cursor:pointer;">문서 내보내기 (PDF)</button>
                     </div>
+                    
+                    ${suggestionsHTML}
+                </div>
+            `;
+            
+            messagesDiv.appendChild(msgDiv);
+            scrollToBottom();
+        }
+
+        // 2. 후속 질문(Follow-up)에 대한 단순 응답 출력
+        function renderSimpleResponse(htmlContent, suggestions = []) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message system`;
+            
+            let suggestionsHTML = '';
+            if (suggestions.length > 0) {
+                suggestionsHTML = `<div class="suggestions" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
+                    ${suggestions.map(s => `<div class="chip" onclick="sendFollowUp('${s}')">${s}</div>`).join('')}
+                </div>`;
+            }
+
+            msgDiv.innerHTML = `
+                <div class="bubble">
+                    <span style="font-size: 14px; color: var(--primary-color); font-weight: bold;">[상세 분석 결과]</span><br>
+                    <div style="margin-top: 8px;">${htmlContent}</div>
+                    ${suggestionsHTML}
                 </div>
             `;
             
