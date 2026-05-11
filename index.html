@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R&D 이슈 분석 자동화 시스템 PoC</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --bg-color: #f4f7f9;
+            --chat-bg: #ffffff;
+            --user-msg-bg: #0056b3;
+            --sys-msg-bg: #eef2f5;
+            --text-main: #333333;
+            --text-light: #666666;
+            --border-color: #dddddd;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', 'Malgun Gothic', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Layout */
+        .sidebar {
+            width: 260px;
+            background-color: #1e293b;
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar h2 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #94a3b8;
+        }
+        
+        .sidebar p {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .history-item {
+            padding: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .history-item:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .main-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--chat-bg);
+        }
+
+        /* Chat Header */
+        .chat-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h1 {
+            font-size: 18px;
+            color: var(--text-main);
+        }
+
+        /* Chat Messages Area */
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .message {
+            max-width: 80%;
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .message.user {
+            align-self: flex-end;
+        }
+
+        .message.system {
+            align-self: flex-start;
+        }
+
+        .bubble {
+            padding: 15px 20px;
+            border-radius: 12px;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .user .bubble {
+            background-color: var(--user-msg-bg);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .system .bubble {
+            background-color: var(--sys-msg-bg);
+            color: var(--text-main);
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Structured Output Styles */
+        .ai-structure {
+            margin-top: 15px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .ai-structure h3 {
+            font-size: 14px;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+
+        .tag {
+            display: inline-block;
+            background: #e2e8f0;
+            color: #475569;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+
+        .tag.alert { background: #fee2e2; color: #991b1b; }
+        .tag.info { background: #e0f2fe; color: #075985; }
+
+        .list-group {
+            list-style: none;
+            margin-bottom: 15px;
+        }
+        
+        .list-group li {
+            font-size: 13px;
+            margin-bottom: 8px;
+            padding-left: 15px;
+            position: relative;
+        }
+
+        .list-group li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--primary-color);
+        }
+
+        /* Input Area */
+        .chat-input-container {
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            background: white;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-wrapper input {
+            flex: 1;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+        }
+
+        .input-wrapper input:focus {
+            border-color: var(--primary-color);
+        }
+
+        .input-wrapper button {
+            padding: 0 25px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .input-wrapper button:hover {
+            background-color: #004494;
+        }
+
+        /* Loading Animation */
+        .typing {
+            display: none;
+            align-self: flex-start;
+            padding: 15px;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>R&D AI Assistant</h2>
+        <p>아래 시나리오를 클릭하여 테스트해보세요.</p>
+        <div class="history-item" onclick="setInput('겨울철 영하 10도 이하 환경에서 배터리 충전 속도가 평소보다 30% 이상 느려집니다.')">❄️ 저온 환경 충전 저하</div>
+        <div class="history-item" onclick="setInput('110km/h 이상 고속으로 주행할 때 스티어링 휠(핸들)에 심한 떨림이 발생합니다.')">🏎️ 고속 주행 시 조향 떨림</div>
+        <div class="history-item" onclick="setInput('주행 중 간헐적으로 내비게이션(AVN) 화면이 꺼졌다가 스스로 재부팅되는 현상이 있습니다.')">🖥️ 인포테인먼트 재부팅 오류</div>
+    </div>
+
+    <div class="main-chat">
+        <div class="chat-header">
+            <h1>이슈 분석 자동화 세션</h1>
+            <span class="tag info">3종 시나리오 대응 엔진 활성화됨</span>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message system">
+                <div class="bubble">
+                    안녕하세요. R&D 문서 기반 이슈 분석 어시스턴트입니다.<br>
+                    발생한 이슈의 증상이나 조건을 상세히 입력해주시면, 과거 데이터를 분석하여 원인과 해결책을 제안해 드립니다.<br><br>
+                    <em>(좌측 메뉴를 클릭하여 시나리오를 테스트할 수 있습니다.)</em>
+                </div>
+            </div>
+        </div>
+
+        <div class="typing" id="typingIndicator">AI가 R&D 문서를 검색하고 분석 중입니다...</div>
+
+        <div class="chat-input-container">
+            <div class="input-wrapper">
+                <input type="text" id="userInput" placeholder="발생한 이슈를 입력하세요...">
+                <button onclick="sendMessage()">분석 요청</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 3가지 시나리오 데이터베이스
+        const scenariosDB = [
+            {
+                keywords: ["배터리", "충전", "저온", "겨울", "영하"],
+                extraction: { env: "저온 (-10℃ 이하)", part: "배터리 / BMS", symptom: "충전 속도 30% 저하" },
+                similarIssues: [
+                    "[2023-11 시험리포트] 혹한기 테스트 중 충전 지연 및 온도 센서 오차 발생 (유사도 92%)",
+                    "[2022-12 품질이슈] A차종 북미 지역 윈터 테스트 중 급속 충전 출력 제한 현상 (유사도 85%)"
+                ],
+                causes: [
+                    "<strong>[제어 로직]</strong> BMS 내 저온 환경 충전 프로파일 (SOC별 전류 제한) 설정 보수적 적용 가능성",
+                    "<strong>[설계/HW]</strong> 배터리 프리히팅(Pre-heating) 시스템 동작 지연 또는 히터 용량 한계"
+                ],
+                solutions: [
+                    "<strong>조치 1 (적용 권장):</strong> BMS의 저온 충전 맵핑 파라미터 최적화 (2023-11 사례 참조 - 제어 로직 0.5v 업데이트)",
+                    "<strong>조치 2:</strong> 충전기 체결 시 배터리 사전 승온 로직 진입 조건 완화 (2022-12 설계 변경 이력 적용)"
+                ],
+                report: "[이슈 개요] 저온(-10℃ 이하) 환경 충전 속도 저하 현상 보고\n- 발생 조건 : 동절기 / -10℃ 이하 / 충전 시\n- 주요 증상 : 정상 대비 충전 속도 30% 이상 감소\n- 원인 후보 : BMS 온도별 충전 프로파일 로직 검토 요망 (우선순위 1)\n- 권장 조치 : 과거 유사 사례(2023-11) 기반 저온 맵핑 파라미터 튜닝 및 시험 재진행."
+            },
+            {
+                keywords: ["고속", "주행", "조향", "떨림", "진동", "핸들", "110km"],
+                extraction: { env: "고속 주행 (100km/h 이상)", part: "조향장치 / 서스펜션", symptom: "스티어링 휠(핸들) 진동 및 떨림" },
+                similarIssues: [
+                    "[2023-05 고객불만] B차종 110km/h 이상 주행 시 스티어링 떨림 현상 (유사도 88%)",
+                    "[2021-09 시험리포트] 고속 주행 테스트 중 하체 공진음에 동반된 미세 진동 (유사도 76%)"
+                ],
+                causes: [
+                    "<strong>[부품 편차]</strong> 휠 밸런스 불량 또는 타이어 조립 공차로 인한 고속 진동 유발",
+                    "<strong>[제어 로직]</strong> MDPS(전자식 조향장치) 고속 주행 시 댐핑 제어 로직 최적화 미흡",
+                    "<strong>[설계/HW]</strong> 로어암 부싱 강성 부족으로 인한 노면 진동 전달"
+                ],
+                solutions: [
+                    "<strong>조치 1 (적용 권장):</strong> 휠 밸런스 재점검 및 MDPS 고속 댐핑 로직(v1.2) 업데이트 적용 (2023-05 사례)",
+                    "<strong>조치 2:</strong> 서스펜션 로어암 부싱 사양 변경(강성 증대품) 테스트 진행"
+                ],
+                report: "[이슈 개요] 고속 주행 시 스티어링 휠 떨림 현상 보고\n- 발생 조건 : 100km/h 이상 고속 주행\n- 주요 증상 : 조향장치(핸들) 진동 및 떨림 발생\n- 원인 후보 : 휠 밸런스 불량 및 MDPS 댐핑 제어 부족 (우선순위 1)\n- 권장 조치 : 휠 밸런스 점검 및 MDPS 로직 업데이트 후 실차 평가 진행."
+            },
+            {
+                keywords: ["인포테인먼트", "재부팅", "화면", "오류", "꺼짐", "블랙아웃", "내비게이션", "AVN"],
+                extraction: { env: "주행/정차 무관", part: "AVN (인포테인먼트)", symptom: "시스템 화면 꺼짐 및 자동 재부팅" },
+                similarIssues: [
+                    "[2024-01 품질이슈] C차종 OTA 업데이트 이후 AVN 간헐적 재부팅 발생 (유사도 95%)",
+                    "[2023-08 SW오류로그] 메모리 누수로 인한 시스템 강제 초기화 현상 (유사도 82%)"
+                ],
+                causes: [
+                    "<strong>[SW 오류]</strong> 특정 프로세스(내비게이션 등) 실행 시 메모리 누수(Memory Leak)로 인한 OOM 발생",
+                    "<strong>[제어 로직]</strong> 과부하 조건에서 AP(Application Processor) 발열로 인한 스로틀링 및 보호 로직 작동"
+                ],
+                solutions: [
+                    "<strong>조치 1 (적용 권장):</strong> AVN SW 메모리 최적화 패치(v2.1.4) 적용 및 OTA 배포 (2024-01 사례 참조)",
+                    "<strong>조치 2:</strong> 발열 조건 재현 테스트 및 쿨링 로직 작동 기준 온도 하향 조정 검토"
+                ],
+                report: "[이슈 개요] 인포테인먼트(AVN) 시스템 간헐적 재부팅 현상 보고\n- 발생 조건 : 시스템 사용 중 (특정 조건 없음)\n- 주요 증상 : 화면 블랙아웃 및 자동 재부팅\n- 원인 후보 : SW 메모리 누수 또는 AP 발열 (우선순위 1)\n- 권장 조치 : 메모리 누수 확인용 디버그 펌웨어 설치 후 로그 추출, 최적화 패치 적용."
+            }
+        ];
+
+        const inputField = document.getElementById('userInput');
+        inputField.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // 사이드바 클릭 시 입력창 채우기 함수
+        function setInput(text) {
+            inputField.value = text;
+            inputField.focus();
+        }
+
+        function sendMessage() {
+            const text = inputField.value.trim();
+            if (!text) return;
+
+            addMessage(text, 'user');
+            inputField.value = '';
+
+            const typing = document.getElementById('typingIndicator');
+            typing.style.display = 'block';
+            scrollToBottom();
+
+            // 입력된 텍스트를 분석하여 적절한 시나리오 선택
+            const matchedScenario = analyzeInput(text);
+
+            setTimeout(() => {
+                typing.style.display = 'none';
+                addSystemAnalysisResponse(matchedScenario);
+            }, 1500);
+        }
+
+        // 키워드 매칭 함수
+        function analyzeInput(text) {
+            for (let scenario of scenariosDB) {
+                // 입력 텍스트에 시나리오 키워드가 2개 이상 포함되어 있는지 확인
+                let matchCount = scenario.keywords.filter(keyword => text.includes(keyword)).length;
+                if (matchCount >= 2) {
+                    return scenario;
+                }
+            }
+            
+            // 매칭되는 키워드가 없을 경우 기본(Default) 응답
+            return {
+                extraction: { env: "조건 미상", part: "분석 필요", symptom: "기타 증상 (상세 분석 요망)" },
+                similarIssues: ["[시스템 메시지] 정확히 일치하는 과거 이력을 찾지 못했습니다. 추가 정보를 입력해주세요."],
+                causes: ["<strong>[미분류]</strong> 입력된 정보가 부족하여 원인 후보를 도출할 수 없습니다."],
+                solutions: ["<strong>조치 권장:</strong> 센서 로그 데이터 및 에러 코드를 추가로 입력해주세요."],
+                report: "데이터 부족으로 보고서를 자동 생성할 수 없습니다."
+            };
+        }
+
+        function addMessage(text, sender) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${sender}`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.innerText = text;
+            
+            msgDiv.appendChild(bubble);
+            messagesDiv.appendChild(msgDiv);
+            scrollToBottom();
+        }
+
+        // 시나리오 데이터를 받아 동적으로 HTML 생성
+        function addSystemAnalysisResponse(data) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message system`;
+            
+            // 배열 데이터를 리스트 HTML로 변환하는 헬퍼 함수
+            const createListHTML = (items) => items.map(item => `<li>${item}</li>`).join('');
+
+            msgDiv.innerHTML = `
+                <div class="bubble">
+                    입력하신 내용을 바탕으로 R&D 문서를 통합 분석한 결과입니다.
+                    
+                    <div class="ai-structure">
+                        <h3>🔍 핵심 정보 추출</h3>
+                        <span class="tag">환경조건: ${data.extraction.env}</span>
+                        <span class="tag">관련부품: ${data.extraction.part}</span>
+                        <span class="tag alert">주요증상: ${data.extraction.symptom}</span>
+                    </div>
+
+                    <div class="ai-structure">
+                        <h3>1. 유사 이슈 자동 검색 (과거 R&D 이력)</h3>
+                        <ul class="list-group">
+                            ${createListHTML(data.similarIssues)}
+                        </ul>
+                    </div>
+
+                    <div class="ai-structure">
+                        <h3>2. 원인 후보 자동 분류</h3>
+                        <ul class="list-group">
+                            ${createListHTML(data.causes)}
+                        </ul>
+                    </div>
+
+                    <div class="ai-structure">
+                        <h3>3. 해결 사례 추천</h3>
+                        <ul class="list-group">
+                            ${createListHTML(data.solutions)}
+                        </ul>
+                    </div>
+
+                    <div class="ai-structure" style="background:#f8fafc;">
+                        <h3>📝 4. 보고서 초안 생성</h3>
+                        <div style="font-family: monospace; font-size: 13px; color: #475569; white-space: pre-line; line-height: 1.6;">
+                            ${data.report}
+                        </div>
+                        <button style="margin-top:10px; padding:5px 10px; font-size:12px; cursor:pointer;">문서 내보내기 (PDF)</button>
+                    </div>
+                </div>
+            `;
+            
+            messagesDiv.appendChild(msgDiv);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            const messagesDiv = document.getElementById('chatMessages');
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+    </script>
+</body>
+</html>
