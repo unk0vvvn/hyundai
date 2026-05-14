@@ -3,593 +3,278 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>R&D 이슈 분석 자동화 시스템 PoC</title>
+    <title>Patent Collaboration Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root {
-            --primary-color: #0056b3;
-            --bg-color: #f4f7f9;
-            --chat-bg: #ffffff;
-            --user-msg-bg: #0056b3;
-            --sys-msg-bg: #eef2f5;
-            --text-main: #333333;
-            --text-light: #666666;
-            --border-color: #dddddd;
-            --accent-color: #0ea5e9;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Pretendard', 'Malgun Gothic', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* Layout */
-        .sidebar {
-            width: 260px;
-            background-color: #1e293b;
-            color: white;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .sidebar h2 {
-            font-size: 16px;
-            margin-bottom: 10px;
-            color: #94a3b8;
-        }
-        
-        .sidebar p {
-            font-size: 12px;
-            color: #64748b;
-            margin-bottom: 20px;
-            line-height: 1.4;
-        }
-
-        .history-item {
-            padding: 10px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 8px;
-            margin-bottom: 10px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .history-item:hover {
-            background: rgba(255,255,255,0.2);
-        }
-
-        .main-chat {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background-color: var(--chat-bg);
-        }
-
-        /* Chat Header */
-        .chat-header {
-            padding: 20px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .chat-header h1 {
-            font-size: 18px;
-            color: var(--text-main);
-        }
-
-        /* Chat Messages Area */
-        .chat-messages {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .message {
-            max-width: 85%;
-            display: flex;
-            flex-direction: column;
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
-        .message.user {
-            align-self: flex-end;
-        }
-
-        .message.system {
-            align-self: flex-start;
-        }
-
-        .bubble {
-            padding: 15px 20px;
-            border-radius: 12px;
-            font-size: 15px;
-            line-height: 1.5;
-        }
-
-        .user .bubble {
-            background-color: var(--user-msg-bg);
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-
-        .system .bubble {
-            background-color: var(--sys-msg-bg);
-            color: var(--text-main);
-            border-bottom-left-radius: 4px;
-        }
-
-        /* Structured Output Styles */
-        .ai-structure {
-            margin-top: 15px;
-            background: white;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 15px;
-        }
-
-        .ai-structure h3 {
-            font-size: 14px;
-            color: var(--primary-color);
-            margin-bottom: 10px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 5px;
-        }
-
-        .tag {
-            display: inline-block;
-            background: #e2e8f0;
-            color: #475569;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            margin-right: 5px;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        .tag.alert { background: #fee2e2; color: #991b1b; }
-        .tag.info { background: #e0f2fe; color: #0369a1; }
-        .tag.success { background: #dcfce7; color: #166534; }
-
-        .list-group {
-            list-style: none;
-            margin-bottom: 15px;
-        }
-        
-        .list-group li {
-            font-size: 13px;
-            margin-bottom: 8px;
-            padding-left: 15px;
-            position: relative;
-        }
-
-        .list-group li::before {
-            content: "•";
-            position: absolute;
-            left: 0;
-            color: var(--primary-color);
-        }
-
-        /* Suggestion Chips */
-        .suggestions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 15px;
-        }
-
-        .chip {
-            background: white;
-            border: 1px solid var(--accent-color);
-            color: var(--accent-color);
-            padding: 8px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .chip:hover {
-            background: var(--accent-color);
-            color: white;
-        }
-
-        /* Input Area */
-        .chat-input-container {
-            padding: 20px;
-            border-top: 1px solid var(--border-color);
-            background: white;
-        }
-
-        .input-wrapper {
-            display: flex;
-            gap: 10px;
-        }
-
-        .input-wrapper input {
-            flex: 1;
-            padding: 15px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 15px;
-            outline: none;
-        }
-
-        .input-wrapper input:focus {
-            border-color: var(--primary-color);
-        }
-
-        .input-wrapper button {
-            padding: 0 25px;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .input-wrapper button:hover {
-            background-color: #004494;
-        }
-
-        /* Loading Animation */
-        .typing {
-            display: none;
-            align-self: flex-start;
-            padding: 15px;
-            color: var(--text-light);
-            font-size: 14px;
-        }
-
-        @keyframes fadeIn {
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap');
+        body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; }
+        .step-inactive { opacity: 0.4; filter: grayscale(1); transition: all 0.5s ease; }
+        .step-active { opacity: 1; filter: grayscale(0); }
+        .agent-glow { box-shadow: 0 0 30px rgba(37, 99, 235, 0.2); border: 1px solid rgba(37, 99, 235, 0.4); }
+        .chat-scroll { scroll-behavior: smooth; }
+        .msg-anim { animation: fadeInUp 0.3s ease-out forwards; }
+        @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        /* 청구항 텍스트 박스 리사이즈 스타일 */
+        .claims-editor {
+            resize: vertical;
+            min-height: 400px;
+            line-height: 1.8;
+            font-family: 'Courier New', Courier, monospace;
+        }
     </style>
 </head>
-<body>
+<body class="text-slate-800">
 
-    <div class="sidebar">
-        <h2>R&D AI Assistant</h2>
-        <p>아래 시나리오를 클릭하여 테스트해보세요.</p>
-        <div class="history-item" onclick="triggerScenario('겨울철 영하 10도 이하 환경에서 배터리 충전 속도가 평소보다 30% 이상 느려집니다.')">❄️ 저온 환경 충전 저하</div>
-        <div class="history-item" onclick="triggerScenario('110km/h 이상 고속으로 주행할 때 스티어링 휠(핸들)에 심한 떨림이 발생합니다.')">🏎️ 고속 주행 시 조향 떨림</div>
-        <div class="history-item" onclick="triggerScenario('주행 중 간헐적으로 내비게이션(AVN) 화면이 꺼졌다가 스스로 재부팅되는 현상이 있습니다.')">🖥️ 인포테인먼트 재부팅 오류</div>
-    </div>
-
-    <div class="main-chat">
-        <div class="chat-header">
-            <h1>이슈 분석 자동화 세션</h1>
-            <span class="tag success">R&D 통합 지식베이스 연동 완료</span>
+    <!-- Header -->
+    <header class="bg-[#0A192F] text-white py-4 px-8 sticky top-0 z-50 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
+                    <i class="fas fa-robot text-white text-lg"></i>
+                </div>
+                <h1 class="text-lg font-bold tracking-tight uppercase italic text-blue-400">Patent Agent</h1>
+            </div>
+            <div class="flex items-center gap-6 text-sm">
+                <span id="statusBadge" class="text-slate-400 flex items-center gap-2 font-medium">
+                    <span class="w-2 h-2 bg-slate-500 rounded-full"></span> System Standby
+                </span>
+                <button id="sendBtn" class="bg-slate-700 text-slate-400 px-5 py-2 rounded-md font-bold cursor-not-allowed transition" disabled>특허팀 전송</button>
+            </div>
         </div>
+    </header>
 
-        <div class="chat-messages" id="chatMessages">
-            <div class="message system">
-                <div class="bubble">
-                    안녕하세요. R&D 문서 통합 분석 어시스턴트입니다.<br>
-                    발생한 이슈의 증상이나 조건을 입력해주시면, 과거 데이터를 분석하고 추가적인 기술 지원을 제공합니다.<br><br>
-                    <em>(좌측 메뉴를 클릭하여 시나리오를 시작할 수 있습니다.)</em>
+    <main class="container mx-auto my-8 px-4 grid grid-cols-12 gap-8">
+        
+        <!-- Left: Input & Agent -->
+        <div class="col-span-12 lg:col-span-5 space-y-6">
+            <div class="bg-white p-7 rounded-2xl shadow-sm border border-slate-200">
+                <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Technical Specification</h2>
+                <textarea id="engInput" class="w-full h-40 p-4 border rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-blue-600 outline-none leading-relaxed mb-4 transition border-slate-200" 
+                >배터리 수명 예측을 위해 가속 페달 센서(APS) 신호의 미분값과 온도 변화율을 융합한 실시간 저항 추정 알고리즘입니다. 기존 고정형 파라미터 방식 대비 환경 변화 대응력이 뛰어납니다.</textarea>
+                <button onclick="startAnalysis()" id="btnProcess" class="w-full bg-blue-600 text-white py-4 rounded-xl font-black hover:bg-blue-700 transition flex items-center justify-center gap-3 shadow-xl shadow-blue-600/20 active:scale-95">
+                    <i class="fas fa-bolt"></i> 분석 시작
+                </button>
+            </div>
+
+            <!-- Agent Interface -->
+            <div id="qaSection" class="bg-white p-7 rounded-2xl shadow-sm border border-slate-200 h-[600px] flex flex-col transition-all duration-500 step-inactive">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-md font-bold flex items-center gap-2 text-blue-600">
+                        <i class="fas fa-comment-nodes"></i> Patent Collaboration Agent
+                    </h2>
+                    <span class="text-[10px] bg-blue-100 text-blue-600 px-2 py-1 rounded-md font-black">ACTIVE</span>
+                </div>
+                <div id="chatBox" class="flex-1 overflow-y-auto mb-4 space-y-4 text-sm p-4 bg-slate-50 rounded-2xl border border-slate-100 chat-scroll shadow-inner">
+                    <div id="idleMsg" class="flex flex-col items-center justify-center h-full text-slate-400 space-y-3">
+                        <i class="fas fa-terminal text-2xl opacity-20"></i>
+                        <p class="text-xs font-bold opacity-40">분석 대기 중...</p>
+                    </div>
+                </div>
+                
+                <!-- Chat Controls: Options + Direct Input -->
+                <div id="chatControls" class="hidden space-y-4">
+                    <div id="optionButtons" class="grid grid-cols-1 gap-2"></div>
+                    <div class="relative flex items-center gap-2 border-t pt-4">
+                        <input type="text" id="userInput" class="flex-1 bg-slate-100 border-none rounded-lg px-4 py-3 text-xs outline-none focus:ring-2 focus:ring-blue-500" placeholder="Agent에게 추가 요청 사항을 입력하세요...">
+                        <button onclick="sendDirectMessage()" class="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition shadow-md">
+                            <i class="fas fa-paper-plane text-xs"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="typing" id="typingIndicator">AI가 지식베이스를 분석하고 있습니다...</div>
+        <!-- Right: Results -->
+        <div id="outputArea" class="col-span-12 lg:col-span-7 space-y-6">
+            <!-- Analysis Summary -->
+            <div id="cardAnalysis" class="bg-white p-7 rounded-2xl shadow-sm border border-slate-200 min-h-[160px] flex items-center justify-center transition-all duration-700">
+                <div id="emptyAnalysis" class="text-slate-300 flex flex-col items-center gap-3 font-bold italic">
+                    <i class="fas fa-lock text-xl"></i>
+                    <p class="text-sm">Agent 협업 완료 후 공개됩니다</p>
+                </div>
+                <div id="contentAnalysis" class="hidden w-full">
+                    <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Analysis Result</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-5 bg-blue-50/50 rounded-2xl border border-blue-100">
+                            <p class="text-[11px] font-black text-blue-600 mb-2 uppercase">Core Concept</p>
+                            <p class="text-sm font-bold text-slate-800">APS 시변 특성 기반 실시간 임피던스 보정 기술</p>
+                        </div>
+                        <div class="p-5 bg-emerald-50/50 rounded-2xl border border-emerald-100">
+                            <p class="text-[11px] font-black text-emerald-600 mb-2 uppercase">Novelty Grade</p>
+                            <p class="text-sm font-bold text-slate-800">High Priority (신규성 확보 가능)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-        <div class="chat-input-container">
-            <div class="input-wrapper">
-                <input type="text" id="userInput" placeholder="발생한 이슈나 추가 질문을 입력하세요...">
-                <button onclick="handleUserInput()">전송</button>
+            <!-- Detailed Claims Editor -->
+            <div id="cardClaims" class="bg-white p-7 rounded-2xl shadow-sm border border-slate-200 min-h-[600px] flex items-center justify-center transition-all duration-700">
+                <div id="emptyClaims" class="text-slate-300 flex flex-col items-center gap-3 font-bold italic">
+                    <i class="fas fa-file-shield text-xl"></i>
+                    <p class="text-sm">에이전트와 내용을 확정해 주세요</p>
+                </div>
+                <div id="contentClaims" class="hidden w-full h-full flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest italic">Final Draft Claims (Editable)</h2>
+                        <span class="text-[10px] text-emerald-600 font-bold border border-emerald-200 px-2 py-0.5 rounded">Verified & Editable</span>
+                    </div>
+                    <textarea id="claimsEditor" class="claims-editor w-full p-6 bg-slate-50 rounded-2xl border border-slate-200 text-[13px] text-slate-700 shadow-inner outline-none focus:border-blue-300 transition-colors" spellcheck="false">
+[청구항 1]
+가속 페달 센서(APS)로부터 차량의 가속 개도량 데이터를 실시간으로 획득하는 단계;
+상기 가속 개도량 데이터의 시간당 변화율을 연산하여 주행 부하 시퀀스를 생성하는 단계;
+배터리의 전압 신호 및 전류 신호를 기반으로 초기 임피던스를 산출하는 단계;
+상기 주행 부하 시퀀스에 대응하는 보정 계수를 기 설정된 룩업 테이블로부터 추출하는 단계; 및
+상기 보정 계수를 상기 초기 임피던스에 적용하여 배터리의 최종 내부 저항을 도출하는 단계를 포함하는 제어 장치.
+
+[청구항 2]
+제1항에 있어서, 상기 보정 계수는 차량의 외부 온도를 측정하는 온도 센서의 신호를 추가로 수신하여, 저온 환경에서의 가속 부하에 대한 가중치를 차등 부여하는 것을 특징으로 하는 제어 장치.
+
+[청구항 3]
+제1항에 있어서, 상기 최종 내부 저항의 변동치가 임계 범위를 초과하는 경우, 배터리 관리 시스템(BMS)의 최대 출력 제한 모드를 활성화하는 단계를 더 포함하는 것을 특징으로 하는 제어 장치.
+
+[청구항 4]
+상기 제1항 내지 제3항 중 어느 한 항의 제어 방법을 구현하기 위한 실행 코드가 저장된 비일시적 컴퓨터 판독 가능한 기록 매체.
+                    </textarea>
+                    <div class="mt-4 flex justify-between items-center">
+                        <p class="text-[10px] text-slate-400 italic">* 우측 하단을 드래그하여 에디터 길이를 조절할 수 있습니다.</p>
+                        <button class="text-xs bg-slate-800 text-white px-4 py-2 rounded-lg font-bold">임시 저장</button>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <script>
-        // 현재 활성화된 시나리오의 ID (문맥 유지를 위함)
-        let currentScenarioId = null;
+        const chatBox = document.getElementById('chatBox');
+        const optionButtons = document.getElementById('optionButtons');
+        const chatControls = document.getElementById('chatControls');
+        const userInput = document.getElementById('userInput');
 
-        // 3가지 시나리오 및 후속 흐름(Follow-ups) 데이터베이스
-        const scenariosDB = [
+        const interactionSteps = [
             {
-                id: "battery_issue",
-                keywords: ["배터리", "충전", "저온", "겨울", "영하"],
-                extraction: { env: "저온 (-10℃ 이하)", part: "배터리 / BMS", symptom: "충전 속도 30% 저하" },
-                similarIssues: [
-                    "[2023-11 시험리포트] 혹한기 테스트 중 충전 지연 및 온도 센서 오차 발생 (유사도 92%)",
-                    "[2022-12 품질이슈] A차종 북미 지역 윈터 테스트 중 급속 충전 출력 제한 현상 (유사도 85%)"
-                ],
-                causes: [
-                    "<strong>[제어 로직]</strong> BMS 내 저온 환경 충전 프로파일(SOC별 전류 제한) 보수적 적용",
-                    "<strong>[설계/HW]</strong> 배터리 프리히팅(Pre-heating) 시스템 동작 지연"
-                ],
-                solutions: [
-                    "<strong>조치 1:</strong> BMS의 저온 충전 맵핑 파라미터 최적화 (권장)",
-                    "<strong>조치 2:</strong> 충전기 체결 시 사전 승온 로직 진입 조건 완화"
-                ],
-                report: "[이슈 개요] 저온 환경 충전 속도 저하 현상 보고\n- 발생 조건 : 동절기 / -10℃ 이하\n- 권장 조치 : 과거 유사 사례(2023-11) 기반 맵핑 파라미터 튜닝",
-                suggestions: ["💡 조치 1의 파라미터 최적화 상세 내역 보여줘", "💡 과거 온도 센서 오차 사례 원인이 뭐야?"],
-                followUps: [
-                    {
-                        keywords: ["파라미터", "최적화", "상세", "조치 1", "맵핑"],
-                        response: `<strong>[BMS 저온 맵핑 파라미터 최적화 가이드]</strong><br><br>
-                        2023-11 사례에 적용된 파라미터 변경 내역입니다.<br>
-                        - SOC 10~40% 구간: 최대 허용 전류 150A -> <strong>175A로 상향</strong><br>
-                        - 승온 목표 온도: 5℃ -> <strong>10℃로 조기 승온 개시</strong><br><br>
-                        이 세팅을 적용한 시험용 바이너리(v0.5.1)를 로드하여 테스트하시길 권장합니다.`
-                    },
-                    {
-                        keywords: ["센서", "오차", "과거", "원인"],
-                        response: `<strong>[온도 센서 오차 발생 원인 분석]</strong><br><br>
-                        과거 사례 분석 결과, 극저온(-15℃ 이하)에서 배터리 셀과 센서 접점 부위의 열수축 편차로 인해 실제보다 온도를 3~5℃ 낮게 측정하는 하드웨어 공차 문제가 있었습니다. 이를 보정하는 SW 필터 로직이 추가된 바 있습니다.`
-                    }
+                id: 1,
+                ai: "기술 내용을 확인했습니다. 분석 결과 <b>'APS 가속 데이터'</b>를 활용한 부분은 독창적이나, 권리 범위를 더 넓히기 위해 <b>'외부 온도'</b>나 <b>'BMS 연동 제어'</b> 로직을 추가하는 것을 추천합니다. 어떤 방향으로 보완할까요?",
+                options: [
+                    { text: "온도 보정 로직을 추가해서 차별성을 강화해줘.", next: 2 },
+                    { text: "출력 제한 모드(BMS) 연동을 추가해줘.", next: 2 }
                 ]
             },
             {
-                id: "steering_issue",
-                keywords: ["고속", "주행", "조향", "떨림", "진동", "핸들", "110km"],
-                extraction: { env: "고속 주행 (100km/h 이상)", part: "조향장치 / 서스펜션", symptom: "스티어링 휠(핸들) 진동 및 떨림" },
-                similarIssues: [
-                    "[2023-05 고객불만] B차종 110km/h 이상 주행 시 스티어링 떨림 현상 (유사도 88%)"
-                ],
-                causes: [
-                    "<strong>[부품 편차]</strong> 휠 밸런스 불량 또는 타이어 조립 공차",
-                    "<strong>[제어 로직]</strong> MDPS 고속 주행 시 댐핑 제어 로직 최적화 미흡"
-                ],
-                solutions: [
-                    "<strong>조치 1:</strong> 휠 밸런스 점검 및 MDPS 고속 댐핑 로직(v1.2) 업데이트 (권장)",
-                    "<strong>조치 2:</strong> 서스펜션 로어암 부싱 사양 변경 검토"
-                ],
-                report: "[이슈 개요] 고속 주행 시 스티어링 휠 떨림 현상\n- 발생 조건 : 100km/h 이상 주행\n- 권장 조치 : 휠 밸런스 점검 및 MDPS 로직 업데이트",
-                suggestions: ["💡 MDPS v1.2 업데이트의 주요 변경점은?", "💡 로어암 부싱 강성 비교 데이터 확인"],
-                followUps: [
-                    {
-                        keywords: ["v1.2", "MDPS", "업데이트", "변경점", "로직"],
-                        response: `<strong>[MDPS v1.2 업데이트 릴리즈 노트]</strong><br><br>
-                        - <strong>적용 대상:</strong> 100km/h 이상 고속 주행 시<br>
-                        - <strong>주요 변경점:</strong> 고속 항속 시 조향 랙(Rack) 기어에 인가되는 미세 역입력 진동을 상쇄하기 위해, 액티브 댐핑(Active Damping) 게인 값을 기존 대비 15% 증대시켰습니다. 이를 통해 노면 진동의 스티어링 휠 전달률을 감소시켰습니다.`
-                    },
-                    {
-                        keywords: ["부싱", "로어암", "강성", "데이터", "비교"],
-                        response: `<strong>[로어암 부싱 강성 비교 데이터]</strong><br><br>
-                        - 기존 부싱 (Part No: 54500-A): 동특성 150 N/mm<br>
-                        - 개선 부싱 (Part No: 54500-B): <strong>동특성 185 N/mm (+23% 강화)</strong><br><br>
-                        개선품 적용 시 고속 주행 시 발생하는 15~20Hz 대역의 공진 진폭이 약 40% 감소하는 시험 결과가 있습니다.`
-                    }
+                id: 2,
+                ai: "반영되었습니다. 보완된 내용을 바탕으로 청구항을 구성했습니다. 혹시 엔지니어님께서 직접 추가하거나 강조하고 싶은 <b>세부 파라미터</b>가 있으신가요? 아래 입력창에 말씀해 주세요.",
+                options: [
+                    { text: "특별히 없어. 이대로 최종 확정 단계로 갈게.", next: 3 }
                 ]
             },
             {
-                id: "avn_issue",
-                keywords: ["인포테인먼트", "재부팅", "화면", "오류", "꺼짐", "블랙아웃", "내비게이션", "AVN"],
-                extraction: { env: "주행/정차 무관", part: "AVN (인포테인먼트)", symptom: "시스템 화면 꺼짐 및 자동 재부팅" },
-                similarIssues: [
-                    "[2024-01 품질이슈] C차종 OTA 업데이트 이후 AVN 간헐적 재부팅 발생 (유사도 95%)"
-                ],
-                causes: [
-                    "<strong>[SW 오류]</strong> 특정 프로세스(내비게이션 등) 실행 시 메모리 누수",
-                    "<strong>[제어 로직]</strong> AP 발열로 인한 스로틀링 및 보호 로직 작동"
-                ],
-                solutions: [
-                    "<strong>조치 1:</strong> AVN SW 메모리 최적화 패치(v2.1.4) 적용 (권장)",
-                    "<strong>조치 2:</strong> 쿨링 로직 작동 기준 온도 하향 조정"
-                ],
-                report: "[이슈 개요] AVN 시스템 간헐적 재부팅 현상\n- 발생 조건 : 시스템 사용 중\n- 권장 조치 : 메모리 누수 확인용 디버그 펌웨어 설치 후 로그 추출",
-                suggestions: ["💡 디버그 펌웨어 설치 및 로그 추출 방법", "💡 최근 OTA(v2.1.4) 배포 이력 확인"],
-                followUps: [
-                    {
-                        keywords: ["디버그", "펌웨어", "로그", "추출", "방법", "설치"],
-                        response: `<strong>[디버그 로그 추출 프로세스]</strong><br><br>
-                        1. 진단기(KDS) 연결 후 AVN 모듈 엔지니어링 모드 진입 (비밀번호: 2024#)<br>
-                        2. 'Memory Monitor' 활성화 후 주행 테스트 진행<br>
-                        3. 재부팅 현상 재현 직후 USB를 통해 <code>/var/log/syslog</code> 및 <code>dumpstate</code> 파일 추출<br>
-                        4. 추출된 로그를 분석 시스템에 업로드해주세요.`
-                    },
-                    {
-                        keywords: ["OTA", "배포", "이력", "v2.1.4"],
-                        response: `<strong>[OTA 배포 이력 정보]</strong><br><br>
-                        - <strong>버전:</strong> v2.1.4 (2024.01.15 배포)<br>
-                        - <strong>배포 대상:</strong> C차종 전체<br>
-                        - <strong>패치 내용:</strong> 지도 데이터 로딩 시 발생하는 캐시 메모리 반환 오류 수정. 해당 패치 적용 차량에서는 동일한 재부팅 이슈 접수율이 98% 감소했습니다.`
-                    }
+                id: 3,
+                ai: "모든 보완 사항이 검토되었습니다. 최종 확정하시면 문서가 생성됩니다. 확정하시겠습니까?",
+                options: [
+                    { text: "내용 최종 확정 및 문서 생성", next: 'FINISH' }
                 ]
             }
         ];
 
-        const inputField = document.getElementById('userInput');
-        inputField.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') handleUserInput();
+        function startAnalysis() {
+            const btn = document.getElementById('btnProcess');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 분석 중...';
+            
+            setTimeout(() => {
+                document.getElementById('qaSection').classList.add('step-active');
+                chatControls.classList.remove('hidden');
+                document.getElementById('idleMsg').classList.add('hidden');
+                
+                pushMsg('ai', interactionSteps[0].ai);
+                renderOptions(interactionSteps[0].options);
+                
+                btn.innerHTML = '<i class="fas fa-check"></i> 분석 완료';
+                btn.classList.replace('bg-blue-600', 'bg-emerald-600');
+                document.getElementById('statusBadge').innerHTML = '<span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span> Agent Collaborating';
+            }, 1200);
+        }
+
+        function pushMsg(type, text) {
+            const wrap = document.createElement('div');
+            wrap.className = `flex ${type === 'user' ? 'justify-end' : 'justify-start'} msg-anim`;
+            wrap.innerHTML = `
+                <div class="flex gap-3 max-w-[92%]">
+                    ${type === 'ai' ? '<div class="w-6 h-6 bg-slate-800 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] text-white"><i class="fas fa-robot"></i></div>' : ''}
+                    <div class="${type === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 rounded-tl-none text-slate-700'} p-3.5 rounded-2xl shadow-sm text-[13px] leading-relaxed">
+                        ${text}
+                    </div>
+                </div>
+            `;
+            chatBox.appendChild(wrap);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function renderOptions(options) {
+            optionButtons.innerHTML = "";
+            options.forEach(opt => {
+                const b = document.createElement('button');
+                b.className = "w-full text-left p-3.5 border border-slate-200 rounded-xl hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 transition text-[12px] font-bold bg-white shadow-sm mb-1";
+                b.innerText = opt.text;
+                b.onclick = () => {
+                    pushMsg('user', opt.text);
+                    if (opt.next === 'FINISH') {
+                        finalize();
+                    } else {
+                        const nextStep = interactionSteps.find(s => s.id === opt.next);
+                        setTimeout(() => {
+                            pushMsg('ai', nextStep.ai);
+                            renderOptions(nextStep.options);
+                        }, 600);
+                    }
+                };
+                optionButtons.appendChild(b);
+            });
+        }
+
+        function sendDirectMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+            
+            pushMsg('user', text);
+            userInput.value = "";
+            
+            // 시뮬레이션 응답
+            setTimeout(() => {
+                pushMsg('ai', `요청하신 <b>'${text}'</b> 관련 기술 요소를 분석하여 청구항 로직에 반영 가능성을 검토하겠습니다. 추가된 내용은 최종 초안에 포함됩니다.`);
+                // 다음 단계 옵션 유지
+                const currentStepId = interactionSteps.find(s => chatBox.innerText.includes(s.ai.substring(0, 10)))?.id || 2;
+                const currentStep = interactionSteps.find(s => s.id === (currentStepId + 1)) || interactionSteps[2];
+                renderOptions(currentStep.options);
+            }, 1000);
+        }
+
+        // 엔터키 전송 지원
+        userInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") sendDirectMessage();
         });
 
-        // 사이드바에서 시나리오를 강제로 트리거할 때
-        function triggerScenario(text) {
-            currentScenarioId = null; // 문맥 초기화 (새로운 시나리오 시작)
-            inputField.value = text;
-            handleUserInput();
-        }
-
-        // 제안 버튼(Chip) 클릭 시
-        function sendFollowUp(text) {
-            // 버튼 텍스트 앞의 이모지(💡) 제거 후 전송
-            inputField.value = text.replace('💡 ', '');
-            handleUserInput();
-        }
-
-        function handleUserInput() {
-            const text = inputField.value.trim();
-            if (!text) return;
-
-            addMessage(text, 'user');
-            inputField.value = '';
-
-            const typing = document.getElementById('typingIndicator');
-            typing.style.display = 'block';
-            scrollToBottom();
-
-            setTimeout(() => {
-                typing.style.display = 'none';
-                processAIResponse(text);
-            }, 800); // 딜레이를 약간 줄여서 빠른 반응성 확보
-        }
-
-        // 입력 텍스트 분석 및 응답 처리 로직 (상태 기반)
-        function processAIResponse(text) {
-            // 1. 새로운 시나리오 키워드인지 먼저 확인 (강한 문맥 전환)
-            let matchedNewScenario = null;
-            for (let scenario of scenariosDB) {
-                let matchCount = scenario.keywords.filter(keyword => text.includes(keyword)).length;
-                if (matchCount >= 2) {
-                    matchedNewScenario = scenario;
-                    break;
-                }
-            }
-
-            // 새로운 시나리오가 인식되었다면 초기 분석 결과 출력
-            if (matchedNewScenario && (!currentScenarioId || matchedNewScenario.id !== currentScenarioId)) {
-                currentScenarioId = matchedNewScenario.id;
-                renderMainAnalysis(matchedNewScenario);
-                return;
-            }
-
-            // 2. 현재 활성화된 시나리오가 있을 경우 (Follow-up 꼬리 질문 처리)
-            if (currentScenarioId) {
-                const activeScenario = scenariosDB.find(s => s.id === currentScenarioId);
-                
-                // 후속 질문 키워드 매칭
-                for (let followUp of activeScenario.followUps) {
-                    let isMatch = followUp.keywords.some(keyword => text.includes(keyword));
-                    if (isMatch) {
-                        renderSimpleResponse(followUp.response, activeScenario.suggestions);
-                        return;
-                    }
-                }
-
-                // 매칭되는 후속 키워드가 없지만 문맥이 유지 중일 때 (기본 답변)
-                renderSimpleResponse(`해당 이슈에 대해 더 궁금한 점이 있으신가요? 관련된 설계 파라미터나 로그 추출 방법 등을 분석해 드릴 수 있습니다.`, activeScenario.suggestions);
-                return;
-            }
-
-            // 3. 완전히 매칭되는 것이 없을 때 (Default)
-            renderSimpleResponse("현재 입력하신 정보만으로는 명확한 유사 이슈를 찾기 어렵습니다. 발생 차종이나 관련 부품, 에러 코드 등을 더 자세히 입력해주세요.");
-        }
-
-        // DOM 요소 추가 헬퍼 함수
-        function addMessage(text, sender) {
-            const messagesDiv = document.getElementById('chatMessages');
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `message ${sender}`;
+        function finalize() {
+            pushMsg('ai', "최종 확정되었습니다. 우측 대시보드에서 보완된 청구항을 확인하고 자유롭게 수정하십시오.");
+            optionButtons.innerHTML = "<div class='p-4 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold border border-emerald-100 flex items-center gap-2'><i class='fas fa-check-double'></i> 최종 확정 완료</div>";
             
-            const bubble = document.createElement('div');
-            bubble.className = 'bubble';
-            bubble.innerText = text;
+            document.getElementById('emptyAnalysis').classList.add('hidden');
+            document.getElementById('contentAnalysis').classList.remove('hidden');
+            document.getElementById('cardAnalysis').classList.add('agent-glow');
             
-            msgDiv.appendChild(bubble);
-            messagesDiv.appendChild(msgDiv);
-            scrollToBottom();
-        }
+            document.getElementById('emptyClaims').classList.add('hidden');
+            document.getElementById('contentClaims').classList.remove('hidden');
+            document.getElementById('cardClaims').classList.add('agent-glow');
 
-        // 1. 메인 분석 결과 출력 (4단계 구조화)
-        function renderMainAnalysis(data) {
-            const messagesDiv = document.getElementById('chatMessages');
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `message system`;
-            
-            const createListHTML = (items) => items.map(item => `<li>${item}</li>`).join('');
-
-            // 후속 질문(Suggestion) 칩 생성
-            let suggestionsHTML = '';
-            if (data.suggestions && data.suggestions.length > 0) {
-                suggestionsHTML = `<div class="suggestions">
-                    ${data.suggestions.map(s => `<div class="chip" onclick="sendFollowUp('${s}')">${s}</div>`).join('')}
-                </div>`;
-            }
-
-            msgDiv.innerHTML = `
-                <div class="bubble">
-                    입력하신 내용을 바탕으로 지식베이스를 통합 분석한 결과입니다.
-                    
-                    <div class="ai-structure">
-                        <h3>🔍 1. 핵심 정보 추출</h3>
-                        <span class="tag info">환경조건: ${data.extraction.env}</span>
-                        <span class="tag info">관련부품: ${data.extraction.part}</span>
-                        <span class="tag alert">주요증상: ${data.extraction.symptom}</span>
-                    </div>
-
-                    <div class="ai-structure">
-                        <h3>📋 2. 과거 유사 이슈 및 원인 후보</h3>
-                        <ul class="list-group">
-                            ${createListHTML(data.similarIssues)}
-                        </ul>
-                        <div style="border-top: 1px dashed #ccc; margin: 10px 0; padding-top: 10px;"></div>
-                        <ul class="list-group">
-                            ${createListHTML(data.causes)}
-                        </ul>
-                    </div>
-
-                    <div class="ai-structure">
-                        <h3>🛠️ 3. 해결 사례 추천</h3>
-                        <ul class="list-group">
-                            ${createListHTML(data.solutions)}
-                        </ul>
-                    </div>
-
-                    <div class="ai-structure" style="background:#f8fafc;">
-                        <h3>📝 4. 보고서 초안</h3>
-                        <div style="font-family: monospace; font-size: 13px; color: #475569; white-space: pre-line; line-height: 1.6;">
-                            ${data.report}
-                        </div>
-                    </div>
-                    
-                    ${suggestionsHTML}
-                </div>
-            `;
-            
-            messagesDiv.appendChild(msgDiv);
-            scrollToBottom();
-        }
-
-        // 2. 후속 질문(Follow-up)에 대한 단순 응답 출력
-        function renderSimpleResponse(htmlContent, suggestions = []) {
-            const messagesDiv = document.getElementById('chatMessages');
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `message system`;
-            
-            let suggestionsHTML = '';
-            if (suggestions.length > 0) {
-                suggestionsHTML = `<div class="suggestions" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
-                    ${suggestions.map(s => `<div class="chip" onclick="sendFollowUp('${s}')">${s}</div>`).join('')}
-                </div>`;
-            }
-
-            msgDiv.innerHTML = `
-                <div class="bubble">
-                    <span style="font-size: 14px; color: var(--primary-color); font-weight: bold;">[상세 분석 결과]</span><br>
-                    <div style="margin-top: 8px;">${htmlContent}</div>
-                    ${suggestionsHTML}
-                </div>
-            `;
-            
-            messagesDiv.appendChild(msgDiv);
-            scrollToBottom();
-        }
-
-        function scrollToBottom() {
-            const messagesDiv = document.getElementById('chatMessages');
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.classList.replace('bg-slate-700', 'bg-blue-600');
+            sendBtn.classList.replace('text-slate-400', 'text-white');
+            sendBtn.classList.remove('cursor-not-allowed');
+            sendBtn.disabled = false;
+            document.getElementById('statusBadge').innerHTML = '<span class="w-2 h-2 bg-emerald-500 rounded-full"></span> Ready to Submit';
         }
     </script>
 </body>
